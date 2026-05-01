@@ -33,9 +33,20 @@ const notifications = [
 const Services = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [folders, setFolders] = useState([]);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
+ const [folders, setFolders] = useState(() => {
+  try {
+    const saved = localStorage.getItem("folders");
+    const parsed = saved ? JSON.parse(saved) : {};
+    return Array.isArray(parsed[heading]) ? parsed[heading] : [];
+  } catch (error) {
+    console.error("Error parsing folders from localStorage:", error);
+    return [];
+  }
+});
+
+
+const [isPopupOpen, setIsPopupOpen] = useState(false);
+const [newFolderName, setNewFolderName] = useState("");
   const [sortCriteria, setSortCriteria] = useState("name"); // State for sort criteria
   const [showDeleteIcons, setShowDeleteIcons] = useState(false);
   const [showEditIcons, setShowEditIcons] = useState(false);
@@ -48,6 +59,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 const [notificationsOpen, setNotificationsOpen] = useState(false); // State for notification popup
 const {heading} = useParams()
+
 /*const [menuOpen, setMenuOpen] = useState(false);
 const [profileOpen, setProfileOpen] = useState(false);*/
 
@@ -56,37 +68,38 @@ const selector = useSelector(state=>state)
   const handleNewFolderClick = () => {
     setIsPopupOpen(true);
   };
-  useEffect(() => {
-    const storedFolders = localStorage.getItem("folders") || {};
-    if (storedFolders[heading]) {
-      setFolders(JSON.parse(storedFolders));
-    } else {
-      setFolders([]);
-    }
-  }, [heading]);
+  // 1. Initialize state and load folders from localStorage
+// const [folders, setFolders] = useState(() => {
+//   try {
+//     const storedData = localStorage.getItem("folders");
+//     if (storedData) {
+//       const allFolders = JSON.parse(storedData);
+//       return allFolders[heading] || [];
+//     }
+//     return [];
+//   } catch (error) {
+//     console.error("Error loading folders:", error);
+//     return [];
+//   }
+// });
+  // useEffect(() => {
+  //   const storedFolders = localStorage.getItem("folders") || {};
+  //   if (storedFolders[heading]) {
+  //     setFolders(JSON.parse(storedFolders));
+  //   } else {
+  //     setFolders([]);
+  //   }
+  // }, [heading]);
   
-  const updateFolders = (newFolders) => {
-    const storedFolders = JSON.parse(localStorage.getItem("folders")) || {};
-    storedFolders[heading] = newFolders; // Store under the correct category
-    localStorage.setItem("folders", JSON.stringify(storedFolders));
-    setFolders(newFolders);
-  };
+  // const updateFolders = (newFolders) => {
+  //   const storedFolders = JSON.parse(localStorage.getItem("folders")) || {};
+  //   storedFolders[heading] = newFolders; // Store under the correct category
+  //   localStorage.setItem("folders", JSON.stringify(storedFolders));
+  //   setFolders(newFolders);
+  // };
   
   
-  const handleSaveFolder = () => {
-    if (newFolderName.trim()) {
-      const newFolder = {
-        name: newFolderName,
-        content: "",
-        date: new Date().toLocaleDateString(),
-      };
-      const updatedFolders = [...folders, newFolder];
-      updateFolders(updatedFolders);
-      setNewFolderName("");
-      setIsPopupOpen(false);
-    }
-  };
-  
+ 
 
 
   const handleFolderClick = (folderName) => {
@@ -98,19 +111,19 @@ const selector = useSelector(state=>state)
     sortFolders(criteria);
   };
 
-  const sortFolders = (criteria) => {
-    const sortedFolders = [...folders].sort((a, b) => {
-      if (criteria === "name") {
-        return a.name.localeCompare(b.name);
-      } else if (criteria === "date") {
-        return new Date(b.date) - new Date(a.date);
-      } else if (criteria === "size") {
-        return b.size - a.size;
-      }
-      return 0;
-    });
-    setFolders(sortedFolders);
-  };
+ const sortFolders = (criteria) => {
+  const sortedFolders = [...folders].sort((a, b) => {
+    if (criteria === "name") {
+      return a.name.localeCompare(b.name);
+    } else if (criteria === "date") {
+      return new Date(b.date) - new Date(a.date);
+    } else if (criteria === "size") {
+      return b.size - a.size;
+    }
+    return 0;
+  });
+  setFolders(sortedFolders);
+};
 
   /*const folder=()=>{
     navigate(`filepage/${name}`)
@@ -199,13 +212,12 @@ const selector = useSelector(state=>state)
     setFolderToDelete(folderName);
   };
 
-  const handleDeleteFolder = () => {
-    const updatedFolders = folders.filter((folder) => folder.name !== folderToDelete);
-    updateFolders(updatedFolders);
-    setFolderToDelete(null);
-    setShowDeleteIcons(false);
-    setShowEditIcons(false); // Hide delete icons after deletion
-  };
+const handleDeleteFolder = () => {
+  setFolders(prev => prev.filter(folder => folder.name !== folderToDelete));
+  setFolderToDelete(null);
+};
+
+  
   
 
   const handleEditFolder = (folder) => {
@@ -214,15 +226,79 @@ const selector = useSelector(state=>state)
     setShowDeleteIcons(false);
   };
 
-  const handleSaveEdit = () => {
-    const updatedFolders = folders.map((folder) =>
-      folder.name === folderToEdit.name ? { ...folder, name: editContent } : folder
-    );
-    updateFolders(updatedFolders);
-    setFolderToEdit(null);
-    setShowEditIcons(false); // Hide edit icons after saving
-  };
+ 
+const handleSaveEdit = () => {
+  const updatedFolders = folders.map(folder => 
+    folder.name === folderToEdit.name ? { ...folder, name: editContent } : folder
+  );
+  updateFolders(updatedFolders);
+  setFolderToEdit(null);
+  setShowEditIcons(false);
+};
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem("folders");
+    const parsed = saved ? JSON.parse(saved) : {};
+    setFolders(Array.isArray(parsed[heading]) ? parsed[heading] : []);
+  } catch (error) {
+    console.error("Error loading folders on heading change:", error);
+    setFolders([]);
+  }
+}, [heading]);
 
+
+// useEffect(() => {
+//   const handleBeforeUnload = () => {
+//     try {
+//       const storedData = localStorage.getItem("folders");
+//       const allFolders = storedData ? JSON.parse(storedData) : {};
+//       if (JSON.stringify(allFolders[heading]) !== JSON.stringify(folders)) {
+//         allFolders[heading] = folders;
+//         localStorage.setItem("folders", JSON.stringify(allFolders));
+//       }
+//     } catch (error) {
+//       console.error("Error syncing folders:", error);
+//     }
+//   };
+
+//   window.addEventListener('beforeunload', handleBeforeUnload);
+//   return () => {
+//     window.removeEventListener('beforeunload', handleBeforeUnload);
+//   };
+// }, [folders, heading]);
+
+
+const updateFolders = (newFolders) => {
+  try {
+    // Get current folders from localStorage
+    const storedData = localStorage.getItem("folders");
+    const allFolders = storedData ? JSON.parse(storedData) : {};
+    
+    // Update folders for current heading
+    allFolders[heading] = newFolders;
+    
+    // Save back to localStorage
+    localStorage.setItem("folders", JSON.stringify(allFolders));
+    
+    // Update state
+    setFolders(newFolders);
+  } catch (error) {
+    console.error("Error updating folders:", error);
+  }
+};
+
+const handleSaveFolder = () => {
+  if (!newFolderName.trim()) return;
+
+  const newFolder = {
+    name: newFolderName,
+    date: new Date().toLocaleDateString()
+  };
+    setFolders([...folders, newFolder]);  // add to state
+  setNewFolderName("");                 // reset input
+  setIsPopupOpen(false);                // close popup
+};
+  
   return (
     <div className="app-container">
       {/* Navbar */}
@@ -351,12 +427,14 @@ const selector = useSelector(state=>state)
     <div
       key={index}
       className="folder-card"
-      onClick={() => handleFolderClick(folder.name)} // Keep onClick here only
+      onClick={() => !showDeleteIcons && !showEditIcons && handleFolderClick(folder.name)} // Keep onClick here only
     >
       <Folder className="folder-icon" size={30} />
       <p className="folder-name">{folder.name}</p>
      
-      <p className="folder-date">Modified: {folder.date}</p>
+      <p className="folder-date">
+  Modified: {new Date(folder.date).toLocaleDateString()}
+</p>
       <p className="folder-size">Size: {folder.size} KB</p>
       {showDeleteIcons && (
     <Trash

@@ -1,11 +1,19 @@
 const express = require("express");
 const multer = require("multer");
+const mysql = require('mysql2');
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 
 const app = express();
 const PORT = 5003;
+
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'Tamizh004',  // Ensure this is correct
+    database: 'workmanagement'
+});
 
 // CORS Configuration
 app.use(cors({
